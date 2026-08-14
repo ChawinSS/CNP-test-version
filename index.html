@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PMS Data Extractor</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --border-dark: #cbd5e1;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --success: #059669;
+      --highlight-bg: #fef08a;
+      --highlight-border: #eab308;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 2rem 1rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    header p {
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+      font-size: 0.95rem;
+    }
+
+    .dropzone {
+      border: 2px dashed var(--border-dark);
+      border-radius: 12px;
+      background-color: var(--card);
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+
+    .dropzone.dragover {
+      border-color: var(--accent);
+      background-color: #eff6ff;
+    }
+
+    .dropzone svg {
+      width: 48px;
+      height: 48px;
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 1.75;
+      margin-bottom: 0.75rem;
+    }
+
+    .dropzone p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .raw-input-toggle {
+      background: none;
+      border: none;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 0.85rem;
+      text-decoration: underline;
+      align-self: flex-start;
+    }
+
+    textarea {
+      width: 100%;
+      height: 120px;
+      background-color: var(--card);
+      border: 1px solid var(--border-dark);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 0.75rem;
+      font-family: monospace;
+      font-size: 0.85rem;
+      resize: vertical;
+      display: none;
+    }
+
+    /* Search & Action Bar */
+    .toolbar {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      background-color: var(--card);
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      position: relative;
+    }
+
+    .search-box input {
+      flex: 1;
+      background-color: #ffffff;
+      border: 1px solid var(--border-dark);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 0.6rem 0.85rem;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-box input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .search-match-badge {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #ca8a04;
+      white-space: nowrap;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .badge-count {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .btn {
+      background-color: var(--accent);
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: background-color 0.2s;
+    }
+
+    .btn:hover {
+      background-color: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background-color: #ffffff;
+      border: 1px solid var(--border-dark);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background-color: var(--bg);
+    }
+
+    .table-container {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background-color: var(--card);
+      max-height: 600px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background-color: #f1f5f9;
+      color: var(--text);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      z-index: 10;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background-color: #f8fafc;
+    }
+
+    /* Highlighted Row Styling (Light Yellow) */
+    tr.row-matched {
+      background-color: var(--highlight-bg) !important;
+      outline: 2px solid var(--highlight-border);
+    }
+
+    tr.row-matched td {
+      color: #000000;
+      font-weight: 600;
+    }
+
+    .highlight {
+      color: #0369a1;
+      font-family: monospace;
+      font-weight: 600;
+    }
+
+    .amount {
+      color: #047857;
+      font-family: monospace;
+      font-weight: 600;
+    }
+
+    .empty-state {
+      padding: 3rem 1rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>PMS Data Extractor</h1>
+      <p>Drop your pipe-separated export file or paste raw text below.</p>
+    </header>
+
+    <div class="dropzone" id="dropzone">
+      <svg viewBox="0 0 24 24">
+        <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <p><strong>Drag & Drop</strong> your file/data here, or <span style="color: var(--accent); text-decoration: underline;">browse files</span></p>
+      <input type="file" id="fileInput" style="display: none;" accept=".txt,.csv,.log">
+    </div>
+
+    <button class="raw-input-toggle" id="toggleInputBtn">+ Or paste plain text</button>
+    <textarea id="rawInput" placeholder="Paste pipe-delimited data here (with header)..."></textarea>
+
+    <!-- Search & Controls Toolbar -->
+    <div class="toolbar">
+      <div class="search-box">
+        <input type="text" id="resvSearchInput" placeholder="Enter comma-separated IDs (e.g. 323899642, 320570990, 319010687)...">
+        <span class="search-match-badge" id="searchMatchBadge"></span>
+      </div>
+
+      <div class="actions">
+        <div class="badge-count" id="rowCount">0 reservations found</div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-secondary" id="clearBtn">Clear</button>
+          <button class="btn" id="exportBtn">Export as CSV</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="table-container">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Reservation ID (RESV_NAME_ID)</th>
+            <th>Rate Code</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr>
+            <td colspan="4" class="empty-state">No data loaded yet. Drop a file or paste text above.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const rawInput = document.getElementById('rawInput');
+    const toggleInputBtn = document.getElementById('toggleInputBtn');
+    const resvSearchInput = document.getElementById('resvSearchInput');
+    const searchMatchBadge = document.getElementById('searchMatchBadge');
+    const tableBody = document.getElementById('tableBody');
+    const rowCount = document.getElementById('rowCount');
+    const clearBtn = document.getElementById('clearBtn');
+    const exportBtn = document.getElementById('exportBtn');
+
+    let parsedData = [];
+
+    toggleInputBtn.addEventListener('click', () => {
+      if (rawInput.style.display === 'block') {
+        rawInput.style.display = 'none';
+        toggleInputBtn.textContent = '+ Or paste plain text';
+      } else {
+        rawInput.style.display = 'block';
+        toggleInputBtn.textContent = '- Hide plain text box';
+        rawInput.focus();
+      }
+    });
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) handleFile(e.target.files[0]);
+    });
+
+    ['dragenter', 'dragover'].forEach(event => {
+      dropzone.addEventListener(event, (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(event => {
+      dropzone.addEventListener(event, (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+      });
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files.length > 0) {
+        handleFile(e.dataTransfer.files[0]);
+      } else {
+        const text = e.dataTransfer.getData('text');
+        if (text) processData(text);
+      }
+    });
+
+    rawInput.addEventListener('input', (e) => processData(e.target.value));
+
+    resvSearchInput.addEventListener('input', () => {
+      highlightReservations(resvSearchInput.value);
+    });
+
+    function handleFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => processData(e.target.result);
+      reader.readAsText(file);
+    }
+
+    function processData(text) {
+      if (!text || !text.trim()) {
+        resetTable();
+        return;
+      }
+
+      const rawLines = text.trim().split(/\r?\n/).filter(line => line.trim().length > 0);
+      if (rawLines.length < 2) return;
+
+      const headerLine = rawLines[0];
+      const headers = headerLine.split('|').map(h => h.trim());
+      
+      const resvIdIdx = headers.indexOf('RESV_NAME_ID');
+      const rateCodeIdx = headers.indexOf('RATE_CODE');
+      const rateAmountIdx = headers.indexOf('EFFECTIVE_RATE_AMOUNT');
+      const currencyIdx = headers.indexOf('CURRENCY_CODE');
+
+      const stitchedRows = [];
+      let currentRow = '';
+
+      for (let i = 1; i < rawLines.length; i++) {
+        const line = rawLines[i].trim();
+        const isNewRecord = /^\d{8}\|/.test(line);
+
+        if (isNewRecord) {
+          if (currentRow) stitchedRows.push(currentRow);
+          currentRow = line;
+        } else {
+          currentRow += (currentRow ? ' ' : '') + line;
+        }
+      }
+      if (currentRow) stitchedRows.push(currentRow);
+
+      parsedData = [];
+
+      for (const row of stitchedRows) {
+        const cols = row.split('|');
+
+        const curr = currencyIdx !== -1 && cols[currencyIdx] ? cols[currencyIdx].trim() : '';
+        const rawAmount = rateAmountIdx !== -1 && cols[rateAmountIdx] ? cols[rateAmountIdx].trim() : '';
+        const resvId = resvIdIdx !== -1 && cols[resvIdIdx] ? cols[resvIdIdx].trim() : '';
+        const rateCode = rateCodeIdx !== -1 && cols[rateCodeIdx] ? cols[rateCodeIdx].trim() : '';
+
+        if (resvId) {
+          parsedData.push({
+            resvId: resvId,
+            rateCode: rateCode || '-',
+            rateAmount: rawAmount !== '' ? `${rawAmount} ${curr}`.trim() : '0.00'
+          });
+        }
+      }
+
+      renderTable(parsedData);
+      highlightReservations(resvSearchInput.value);
+    }
+
+    function renderTable(data) {
+      if (!data.length) {
+        resetTable();
+        return;
+      }
+
+      tableBody.innerHTML = data.map((row, idx) => `
+        <tr data-resv-id="${escapeHtml(row.resvId)}">
+          <td>${idx + 1}</td>
+          <td class="highlight">${escapeHtml(row.resvId)}</td>
+          <td><strong>${escapeHtml(row.rateCode)}</strong></td>
+          <td class="amount">${escapeHtml(row.rateAmount)}</td>
+        </tr>
+      `).join('');
+
+      rowCount.textContent = `${data.length} reservation${data.length === 1 ? '' : 's'} parsed`;
+    }
+
+    function highlightReservations(rawSearch) {
+      const searchTerms = rawSearch
+        .split(/[,;\s]+/)
+        .map(term => term.trim().toLowerCase())
+        .filter(term => term.length > 0);
+
+      const rows = tableBody.querySelectorAll('tr[data-resv-id]');
+      let matchCount = 0;
+      let firstMatch = null;
+
+      rows.forEach(row => {
+        const resvId = row.getAttribute('data-resv-id').toLowerCase();
+        const isMatched = searchTerms.length > 0 && searchTerms.some(term => resvId.includes(term));
+
+        if (isMatched) {
+          row.classList.add('row-matched');
+          matchCount++;
+          if (!firstMatch) firstMatch = row;
+        } else {
+          row.classList.remove('row-matched');
+        }
+      });
+
+      if (searchTerms.length === 0) {
+        searchMatchBadge.textContent = '';
+      } else if (matchCount > 0) {
+        searchMatchBadge.textContent = `Found ${matchCount} match${matchCount === 1 ? '' : 'es'}`;
+        if (firstMatch) {
+          firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else {
+        searchMatchBadge.textContent = 'No matches found';
+      }
+    }
+
+    function resetTable() {
+      parsedData = [];
+      tableBody.innerHTML = `<tr><td colspan="4" class="empty-state">No data loaded yet. Drop a file or paste text above.</td></tr>`;
+      rowCount.textContent = '0 reservations found';
+      searchMatchBadge.textContent = '';
+      resvSearchInput.value = '';
+    }
+
+    clearBtn.addEventListener('click', () => {
+      rawInput.value = '';
+      fileInput.value = '';
+      resetTable();
+    });
+
+    exportBtn.addEventListener('click', () => {
+      if (!parsedData.length) return alert('No data to export!');
+
+      const csvContent = [
+        ['Index', 'Reservation ID', 'Rate Code', 'Amount'],
+        ...parsedData.map((d, i) => [i + 1, d.resvId, d.rateCode, `"${d.rateAmount}"`])
+      ].map(e => e.join(',')).join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'reservations_summary.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>"']/g, (m) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      })[m]);
+    }
+  </script>
+</body>
+</html>
